@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { Item } from "@/lib/db";
 
 interface PostFormProps {
   onSuccess: () => void;
+  editItem?: Item | null;
+  onCancelEdit?: () => void;
 }
 
-export default function PostForm({ onSuccess }: PostFormProps) {
+export default function PostForm({ onSuccess, editItem, onCancelEdit }: PostFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState("handoff");
@@ -18,6 +21,20 @@ export default function PostForm({ onSuccess }: PostFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isEditing = !!editItem;
+
+  useEffect(() => {
+    if (editItem) {
+      setTitle(editItem.title);
+      setDescription(editItem.description);
+      setDeliveryMethod(editItem.delivery_method);
+      setDeliveryNote(editItem.delivery_note || "");
+      setCategory(editItem.category);
+      setImagePreview(editItem.image_path);
+      setImageFile(null);
+    }
+  }, [editItem]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,10 +64,9 @@ export default function PostForm({ onSuccess }: PostFormProps) {
     }
 
     try {
-      const res = await fetch("/api/items", {
-        method: "POST",
-        body: formData,
-      });
+      const url = isEditing ? `/api/items/${editItem.id}` : "/api/items";
+      const method = isEditing ? "PUT" : "POST";
+      const res = await fetch(url, { method, body: formData });
       if (res.ok) {
         setSuccess(true);
         setTitle("");
@@ -76,9 +92,13 @@ export default function PostForm({ onSuccess }: PostFormProps) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <div className="text-6xl animate-bounce">🎉</div>
-        <h3 className="text-xl font-bold text-[#29CCB1]">出品完了！</h3>
+        <h3 className="text-xl font-bold text-[#29CCB1]">
+          {isEditing ? "更新完了！" : "出品完了！"}
+        </h3>
         <p className="text-gray-500 text-sm">
-          Slackの #z_club_papamama に投稿されました
+          {isEditing
+            ? "内容が更新されました"
+            : "Slackの #z_club_papamama に投稿されました"}
         </p>
       </div>
     );
@@ -87,9 +107,20 @@ export default function PostForm({ onSuccess }: PostFormProps) {
   return (
     <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6">
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-50 space-y-5">
-        <h3 className="text-lg font-bold text-[#1A1A2E] flex items-center gap-2">
-          📦 出品する
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-[#1A1A2E] flex items-center gap-2">
+            {isEditing ? "✏️ 内容を編集" : "📦 出品する"}
+          </h3>
+          {isEditing && onCancelEdit && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              キャンセル
+            </button>
+          )}
+        </div>
 
         {/* Image upload */}
         <div>
@@ -244,8 +275,10 @@ export default function PostForm({ onSuccess }: PostFormProps) {
         {submitting ? (
           <span className="flex items-center justify-center gap-2">
             <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-            出品中...
+            {isEditing ? "更新中..." : "出品中..."}
           </span>
+        ) : isEditing ? (
+          "✏️ 更新する"
         ) : (
           "🎉 出品する"
         )}

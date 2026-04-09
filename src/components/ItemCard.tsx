@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Item } from "@/lib/db";
 
 interface ItemCardProps {
@@ -9,6 +9,7 @@ interface ItemCardProps {
   currentSlackId?: string;
   onWant: (id: number) => void;
   onComplete: (id: number) => void;
+  onEdit?: (item: Item) => void;
 }
 
 const DELIVERY_LABELS: Record<string, string> = {
@@ -30,9 +31,12 @@ export default function ItemCard({
   currentSlackId,
   onWant,
   onComplete,
+  onEdit,
 }: ItemCardProps) {
   const [wantSent, setWantSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const deliveryLabel =
     DELIVERY_LABELS[item.delivery_method] ||
@@ -41,6 +45,16 @@ export default function ItemCard({
   const categoryLabel = CATEGORY_LABELS[item.category] || "📦 その他";
 
   const isMine = currentSlackId === item.seller_slack_id;
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const handleWant = async () => {
     setLoading(true);
@@ -96,6 +110,43 @@ export default function ItemCard({
         <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-xs px-2 py-1 rounded-full">
           {categoryLabel}
         </span>
+        {/* Menu for own items */}
+        {isMine && item.status !== "sold" && (
+          <div className="absolute top-2 right-2" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="bg-white/90 backdrop-blur-sm w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:bg-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[140px] z-10">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onEdit?.(item);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  ✏️ 内容を編集
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleComplete();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  ✅ お渡し完了
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Content */}

@@ -57,6 +57,7 @@ export async function postItemToSlack(
         },
       ],
     });
+    console.log("Slack post success, ts:", result.ts);
     return result.ts;
   } catch (error) {
     console.error("Slack post error:", error);
@@ -74,8 +75,9 @@ export async function postWantToSlack(
     await slack.chat.postMessage({
       channel: CHANNEL_ID,
       thread_ts: messageTs,
-      text: `💕 <@${buyerSlackId}> さんが「${itemTitle}」を欲しい・気になると言っています！\n<@${sellerSlackId}> さん、ここやDMでやり取りしましょう 🙌`,
+      text: `💕 <@${buyerSlackId}> さんが <@${sellerSlackId}> さんの出品「${itemTitle}」に欲しい・気になると言っています！ここやDMでやり取りしましょう 🙌`,
     });
+    console.log("Slack want reply success");
   } catch (error) {
     console.error("Slack thread reply error:", error);
   }

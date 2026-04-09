@@ -8,6 +8,7 @@ interface ItemListProps {
   currentSlackId?: string;
   category: string;
   myItems?: boolean;
+  onEdit?: (item: Item) => void;
 }
 
 const CATEGORIES = [
@@ -23,6 +24,7 @@ const CATEGORIES = [
 export default function ItemList({
   currentSlackId,
   myItems,
+  onEdit,
 }: ItemListProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +105,7 @@ export default function ItemList({
               currentSlackId={currentSlackId}
               onWant={handleWant}
               onComplete={handleComplete}
+              onEdit={onEdit}
             />
           ))}
         </div>

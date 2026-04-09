@@ -21,7 +21,7 @@ export default function LoginButton() {
     try {
       await login(name.trim(), slackId.trim());
     } catch {
-      setError("ログインに失敗しました");
+      setError("ログインに失敗しました。Slack メンバーIDが正しいか確認してください");
     } finally {
       setLoading(false);
     }
@@ -65,9 +65,14 @@ export default function LoginButton() {
             placeholder="例: U01ABCD2EFG"
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#29CCB1] focus:ring-2 focus:ring-[#29CCB1]/20 outline-none transition-all text-[#1A1A2E]"
           />
-          <p className="text-xs text-gray-400 mt-1">
-            Slackプロフィール → ... → メンバーIDをコピー
-          </p>
+          <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+            <p className="text-xs text-gray-500 leading-relaxed">
+              <span className="font-medium text-gray-600">IDの確認方法：</span><br />
+              Slackで自分のプロフィールを開く →
+              <span className="font-medium"> ... </span>（3点リーダー）をクリック →
+              <span className="font-medium"> 「Copy member ID」</span>をクリックしてコピペ
+            </p>
+          </div>
         </div>
 
         {error && (
