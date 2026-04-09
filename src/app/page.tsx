@@ -43,6 +43,7 @@ export default function Home() {
           key={`buy-${refreshKey}`}
           currentSlackId={user.slackId}
           category="all"
+          onEdit={handleEdit}
         />
       )}
 
