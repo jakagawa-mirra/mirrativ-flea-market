@@ -8,7 +8,8 @@ export async function postItemToSlack(
   title: string,
   description: string,
   deliveryMethod: string,
-  category: string
+  category: string,
+  itemUrl: string
 ): Promise<string | undefined> {
   const deliveryLabel =
     deliveryMethod === "shipping"
@@ -45,6 +46,19 @@ export async function postItemToSlack(
             type: "mrkdwn",
             text: `*説明*\n${description.substring(0, 200)}${description.length > 200 ? "..." : ""}`,
           },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "🔗 フリマサイトで見る",
+              },
+              url: itemUrl,
+            },
+          ],
         },
         {
           type: "context",

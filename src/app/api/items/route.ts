@@ -62,16 +62,7 @@ export async function POST(request: NextRequest) {
 
   const db = await getDb();
 
-  // Post to Slack
-  const delivery = deliveryNote || deliveryMethod;
-  const messageTs = await postItemToSlack(
-    user.slackId,
-    title,
-    description,
-    delivery,
-    category
-  );
-
+  // Insert item first to get the ID
   const result = await db.execute({
     sql: `INSERT INTO items (title, description, image_path, delivery_method, delivery_note, category, seller_slack_id, seller_name, seller_image, slack_message_ts)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -85,9 +76,36 @@ export async function POST(request: NextRequest) {
       user.slackId,
       user.name,
       null,
-      messageTs ?? null,
+      null,
     ],
   });
 
-  return NextResponse.json({ id: Number(result.lastInsertRowid) }, { status: 201 });
+  const itemId = Number(result.lastInsertRowid);
+
+  // Build item URL
+  const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const itemUrl = `${baseUrl}/?item=${itemId}`;
+
+  // Post to Slack with link
+  const delivery = deliveryNote || deliveryMethod;
+  const messageTs = await postItemToSlack(
+    user.slackId,
+    title,
+    description,
+    delivery,
+    category,
+    itemUrl
+  );
+
+  // Update item with slack_message_ts
+  if (messageTs) {
+    await db.execute({
+      sql: "UPDATE items SET slack_message_ts = ? WHERE id = ?",
+      args: [messageTs, itemId],
+    });
+  }
+
+  return NextResponse.json({ id: itemId }, { status: 201 });
 }
