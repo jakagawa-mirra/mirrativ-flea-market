@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   const deliveryMethod = formData.get("delivery_method") as string;
   const deliveryNote = formData.get("delivery_note") as string | null;
   const category = (formData.get("category") as string) || "other";
-  const image = formData.get("image") as File | null;
+  const images = formData.getAll("images") as File[];
 
   if (!title || !description || !deliveryMethod) {
     return NextResponse.json(
@@ -52,13 +52,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let imagePath: string | null = null;
-  if (image && image.size > 0) {
-    const blob = await put(`items/${Date.now()}-${image.name}`, image, {
-      access: "public",
-    });
-    imagePath = blob.url;
+  // Upload multiple images
+  const imageUrls: string[] = [];
+  for (const image of images) {
+    if (image && image.size > 0) {
+      const blob = await put(`items/${Date.now()}-${image.name}`, image, {
+        access: "public",
+      });
+      imageUrls.push(blob.url);
+    }
   }
+
+  const imagePath = imageUrls.length > 0 ? JSON.stringify(imageUrls) : null;
 
   const db = await getDb();
 
@@ -88,15 +93,17 @@ export async function POST(request: NextRequest) {
     : process.env.NEXTAUTH_URL || "http://localhost:3000";
   const itemUrl = `${baseUrl}/?item=${itemId}`;
 
-  // Post to Slack with link
+  // Post to Slack with link and first image
   const delivery = deliveryNote || deliveryMethod;
+  const firstImage = imageUrls.length > 0 ? imageUrls[0] : undefined;
   const messageTs = await postItemToSlack(
     user.slackId,
     title,
     description,
     delivery,
     category,
-    itemUrl
+    itemUrl,
+    firstImage
   );
 
   // Update item with slack_message_ts

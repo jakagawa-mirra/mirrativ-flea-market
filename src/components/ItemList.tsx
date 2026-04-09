@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ItemCard from "./ItemCard";
+import ItemDetail from "./ItemDetail";
 import { Item } from "@/lib/db";
 
 interface ItemListProps {
@@ -29,6 +30,7 @@ export default function ItemList({
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [detailItem, setDetailItem] = useState<Item | null>(null);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -59,6 +61,17 @@ export default function ItemList({
 
   return (
     <div className="space-y-4">
+      {/* Item detail modal */}
+      {detailItem && (
+        <ItemDetail
+          item={detailItem}
+          currentSlackId={currentSlackId}
+          onClose={() => setDetailItem(null)}
+          onWant={handleWant}
+          onComplete={handleComplete}
+          onEdit={onEdit}
+        />
+      )}
       {/* Category filter (not shown on my items tab) */}
       {!myItems && (
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
@@ -106,6 +119,7 @@ export default function ItemList({
               onWant={handleWant}
               onComplete={handleComplete}
               onEdit={onEdit}
+              onDetail={setDetailItem}
             />
           ))}
         </div>

@@ -10,6 +10,18 @@ interface ItemCardProps {
   onWant: (id: number) => void;
   onComplete: (id: number) => void;
   onEdit?: (item: Item) => void;
+  onDetail?: (item: Item) => void;
+}
+
+function parseImageUrls(imagePath: string | null): string[] {
+  if (!imagePath) return [];
+  try {
+    const parsed = JSON.parse(imagePath);
+    if (Array.isArray(parsed)) return parsed;
+    return [imagePath];
+  } catch {
+    return [imagePath];
+  }
 }
 
 const DELIVERY_LABELS: Record<string, string> = {
@@ -32,6 +44,7 @@ export default function ItemCard({
   onWant,
   onComplete,
   onEdit,
+  onDetail,
 }: ItemCardProps) {
   const [wantSent, setWantSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,6 +58,8 @@ export default function ItemCard({
   const categoryLabel = CATEGORY_LABELS[item.category] || "📦 その他";
 
   const isMine = currentSlackId === item.seller_slack_id;
+  const imageUrls = parseImageUrls(item.image_path);
+  const firstImage = imageUrls.length > 0 ? imageUrls[0] : null;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -73,14 +88,21 @@ export default function ItemCard({
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden hover:shadow-md transition-shadow duration-200">
       {/* Image */}
-      <div className="relative aspect-square bg-gray-50">
-        {item.image_path ? (
-          <Image
-            src={item.image_path}
-            alt={item.title}
-            fill
-            className="object-cover"
-          />
+      <div className="relative aspect-square bg-gray-50 cursor-pointer" onClick={() => onDetail?.(item)}>
+        {firstImage ? (
+          <>
+            <Image
+              src={firstImage}
+              alt={item.title}
+              fill
+              className="object-cover"
+            />
+            {imageUrls.length > 1 && (
+              <span className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                📷 {imageUrls.length}
+              </span>
+            )}
+          </>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
             <svg
@@ -151,7 +173,10 @@ export default function ItemCard({
 
       {/* Content */}
       <div className="p-4 space-y-2">
-        <h3 className="font-bold text-[#1A1A2E] text-base truncate">
+        <h3
+          className="font-bold text-[#1A1A2E] text-base truncate cursor-pointer hover:text-[#29CCB1] transition-colors"
+          onClick={() => onDetail?.(item)}
+        >
           {item.title}
         </h3>
         <p className="text-gray-500 text-sm line-clamp-2">

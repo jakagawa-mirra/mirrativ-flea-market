@@ -49,15 +49,31 @@ export async function PUT(
   const deliveryMethod = formData.get("delivery_method") as string;
   const deliveryNote = formData.get("delivery_note") as string | null;
   const category = (formData.get("category") as string) || "other";
-  const image = formData.get("image") as File | null;
+  const images = formData.getAll("images") as File[];
+  const existingImages = formData.get("existing_images") as string | null;
 
-  let imagePath = item.image_path;
-  if (image && image.size > 0) {
-    const blob = await put(`items/${Date.now()}-${image.name}`, image, {
-      access: "public",
-    });
-    imagePath = blob.url;
+  // Build image URLs: keep existing + add new uploads
+  const imageUrls: string[] = [];
+
+  // Add existing images that user kept
+  if (existingImages) {
+    try {
+      const parsed = JSON.parse(existingImages);
+      if (Array.isArray(parsed)) imageUrls.push(...parsed);
+    } catch { /* ignore */ }
   }
+
+  // Upload new images
+  for (const image of images) {
+    if (image && image.size > 0) {
+      const blob = await put(`items/${Date.now()}-${image.name}`, image, {
+        access: "public",
+      });
+      imageUrls.push(blob.url);
+    }
+  }
+
+  const imagePath = imageUrls.length > 0 ? JSON.stringify(imageUrls) : item.image_path;
 
   await db.execute({
     sql: `UPDATE items SET title = ?, description = ?, image_path = ?, delivery_method = ?, delivery_note = ?, category = ? WHERE id = ?`,

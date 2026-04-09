@@ -35,7 +35,7 @@ export interface Item {
   id: number;
   title: string;
   description: string;
-  image_path: string | null;
+  image_path: string | null; // JSON array of URLs, or single URL for backward compat
   delivery_method: string;
   delivery_note: string | null;
   category: string;
@@ -45,4 +45,16 @@ export interface Item {
   slack_message_ts: string | null;
   status: string;
   created_at: string;
+}
+
+/** Parse image_path into an array of URLs (handles both old single URL and new JSON array) */
+export function getImageUrls(item: Item): string[] {
+  if (!item.image_path) return [];
+  try {
+    const parsed = JSON.parse(item.image_path);
+    if (Array.isArray(parsed)) return parsed;
+    return [item.image_path];
+  } catch {
+    return [item.image_path];
+  }
 }

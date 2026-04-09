@@ -9,7 +9,8 @@ export async function postItemToSlack(
   description: string,
   deliveryMethod: string,
   category: string,
-  itemUrl: string
+  itemUrl: string,
+  imageUrl?: string
 ): Promise<string | undefined> {
   const deliveryLabel =
     deliveryMethod === "shipping"
@@ -47,6 +48,15 @@ export async function postItemToSlack(
             text: `*説明*\n${description.substring(0, 200)}${description.length > 200 ? "..." : ""}`,
           },
         },
+        ...(imageUrl
+          ? [
+              {
+                type: "image" as const,
+                image_url: imageUrl,
+                alt_text: title,
+              },
+            ]
+          : []),
         {
           type: "actions",
           elements: [

@@ -4,6 +4,17 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Item } from "@/lib/db";
 
+function parseImageUrls(imagePath: string | null): string[] {
+  if (!imagePath) return [];
+  try {
+    const parsed = JSON.parse(imagePath);
+    if (Array.isArray(parsed)) return parsed;
+    return [imagePath];
+  } catch {
+    return [imagePath];
+  }
+}
+
 interface PostFormProps {
   onSuccess: () => void;
   editItem?: Item | null;
@@ -16,8 +27,9 @@ export default function PostForm({ onSuccess, editItem, onCancelEdit }: PostForm
   const [deliveryMethod, setDeliveryMethod] = useState("handoff");
   const [deliveryNote, setDeliveryNote] = useState("");
   const [category, setCategory] = useState("other");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,18 +43,44 @@ export default function PostForm({ onSuccess, editItem, onCancelEdit }: PostForm
       setDeliveryMethod(editItem.delivery_method);
       setDeliveryNote(editItem.delivery_note || "");
       setCategory(editItem.category);
-      setImagePreview(editItem.image_path);
-      setImageFile(null);
+      // Parse existing images
+      const urls = parseImageUrls(editItem.image_path);
+      setExistingImages(urls);
+      setImagePreviews(urls);
+      setImageFiles([]);
     }
   }, [editItem]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const newFiles = [...imageFiles, ...files];
+    setImageFiles(newFiles);
+
+    // Generate previews for new files
+    files.forEach((file) => {
       const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.onloadend = () => {
+        setImagePreviews((prev) => [...prev, reader.result as string]);
+      };
       reader.readAsDataURL(file);
+    });
+
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    if (index < existingImages.length) {
+      // Remove existing image
+      setExistingImages((prev) => prev.filter((_, i) => i !== index));
+      setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      // Remove new file
+      const fileIndex = index - existingImages.length;
+      setImageFiles((prev) => prev.filter((_, i) => i !== fileIndex));
+      setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     }
   };
 
@@ -59,8 +97,13 @@ export default function PostForm({ onSuccess, editItem, onCancelEdit }: PostForm
     if (deliveryMethod === "other") {
       formData.append("delivery_note", deliveryNote);
     }
-    if (imageFile) {
-      formData.append("image", imageFile);
+    // Send existing images (for edit mode)
+    if (isEditing && existingImages.length > 0) {
+      formData.append("existing_images", JSON.stringify(existingImages));
+    }
+    // Send new image files
+    for (const file of imageFiles) {
+      formData.append("images", file);
     }
 
     try {
@@ -74,8 +117,9 @@ export default function PostForm({ onSuccess, editItem, onCancelEdit }: PostForm
         setDeliveryMethod("handoff");
         setDeliveryNote("");
         setCategory("other");
-        setImagePreview(null);
-        setImageFile(null);
+        setImagePreviews([]);
+        setImageFiles([]);
+        setExistingImages([]);
         setTimeout(() => {
           setSuccess(false);
           onSuccess();
@@ -122,42 +166,57 @@ export default function PostForm({ onSuccess, editItem, onCancelEdit }: PostForm
           )}
         </div>
 
-        {/* Image upload */}
+        {/* Image upload - multiple */}
         <div>
           <label className="block text-sm font-medium text-gray-600 mb-2">
-            写真（任意）
+            写真（複数可・任意）
           </label>
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="relative border-2 border-dashed border-emerald-200 rounded-xl aspect-video flex flex-col items-center justify-center cursor-pointer hover:border-[#29CCB1] hover:bg-emerald-50/50 transition-all overflow-hidden"
-          >
-            {imagePreview ? (
-              <>
-                <Image
-                  src={imagePreview}
-                  alt="Preview"
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                  <span className="text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
-                    📷 変更
-                  </span>
-                </div>
-              </>
-            ) : (
-              <>
-                <span className="text-3xl mb-1">📷</span>
-                <span className="text-sm text-gray-400">
-                  タップして写真を追加
-                </span>
-              </>
+          <div className="space-y-3">
+            {/* Image previews grid */}
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {imagePreviews.map((preview, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-emerald-100">
+                    <Image
+                      src={preview}
+                      alt={`Preview ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 bg-black/50 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-black/70 transition-colors"
+                    >
+                      ✕
+                    </button>
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 bg-[#29CCB1] text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                        メイン
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
+            {/* Add photo button */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-emerald-200 rounded-xl py-6 flex flex-col items-center justify-center cursor-pointer hover:border-[#29CCB1] hover:bg-emerald-50/50 transition-all"
+            >
+              <span className="text-2xl mb-1">📷</span>
+              <span className="text-sm text-gray-400">
+                {imagePreviews.length === 0
+                  ? "タップして写真を追加"
+                  : "写真を追加"}
+              </span>
+            </div>
           </div>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             onChange={handleImageChange}
             className="hidden"
           />
