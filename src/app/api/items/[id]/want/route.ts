@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { getDb, Item } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import { postWantToSlack } from "@/lib/slack";
 
 export async function POST(

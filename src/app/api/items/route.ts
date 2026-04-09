@@ -4,6 +4,8 @@ import { getDb, Item } from "@/lib/db";
 import { postItemToSlack } from "@/lib/slack";
 import { put } from "@vercel/blob";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const db = await getDb();
   const { searchParams } = new URL(request.url);
