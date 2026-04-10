@@ -10,7 +10,7 @@ interface User {
 interface UserContextType {
   user: User | null;
   loading: boolean;
-  login: (name: string, slackId: string) => Promise<void>;
+  login: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -36,11 +36,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (name: string, slackId: string) => {
+  const login = useCallback(async (email: string) => {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slackId }),
+      body: JSON.stringify({ email }),
     });
     const data = await res.json();
     if (res.ok) {

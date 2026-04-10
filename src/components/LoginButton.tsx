@@ -5,23 +5,26 @@ import { useUser } from "@/components/UserContext";
 
 export default function LoginButton() {
   const { login } = useUser();
-  const [name, setName] = useState("");
-  const [slackId, setSlackId] = useState("");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !slackId.trim()) {
-      setError("両方入力してください");
+    if (!email.trim()) {
+      setError("メールアドレスを入力してください");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      await login(name.trim(), slackId.trim());
-    } catch {
-      setError("ログインに失敗しました。Slack メンバーIDが正しいか確認してください");
+      await login(email.trim());
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("ログインに失敗しました");
+      }
     } finally {
       setLoading(false);
     }
@@ -44,35 +47,19 @@ export default function LoginButton() {
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-600 mb-1">
-            表示名
+            ミラティブのメールアドレス
           </label>
           <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="例: 山田太郎"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="taro.yamada@mirrativ.com"
+            autoComplete="email"
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#29CCB1] focus:ring-2 focus:ring-[#29CCB1]/20 outline-none transition-all text-[#1A1A2E]"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Slack メンバーID
-          </label>
-          <input
-            type="text"
-            value={slackId}
-            onChange={(e) => setSlackId(e.target.value)}
-            placeholder="例: U01ABCD2EFG"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#29CCB1] focus:ring-2 focus:ring-[#29CCB1]/20 outline-none transition-all text-[#1A1A2E]"
-          />
-          <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 leading-relaxed">
-              <span className="font-medium text-gray-600">IDの確認方法：</span><br />
-              Slackで自分のプロフィールを開く →
-              <span className="font-medium"> ... </span>（3点リーダー）をクリック →
-              <span className="font-medium"> 「Copy member ID」</span>をクリックしてコピペ
-            </p>
-          </div>
+          <p className="mt-1.5 text-xs text-gray-400">
+            Slackに登録されている @mirrativ.com のアドレスを入力してください
+          </p>
         </div>
 
         {error && (
